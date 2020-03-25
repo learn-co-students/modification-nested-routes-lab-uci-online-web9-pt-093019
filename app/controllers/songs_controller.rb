@@ -25,11 +25,29 @@ class SongsController < ApplicationController
   end
 
   def new
-    @song = Song.new
+    if params[:artist_id]
+      artist = Artist.find_by(id: params[:artist_id])
+      if artist
+        @song = artist.songs.build
+      else
+        redirect_to artists_path
+      end
+    else
+      @song = Song.new
+    end
   end
 
   def create
-    @song = Song.new(song_params)
+    if params[:artist_id]
+      artist = Artist.find_by(id: params[:artist_id])
+      if artist
+        @song = artist.songs.build(song_params)
+      else
+        redirect_to artists_path
+      end
+    else
+      @song = Song.new(song_params)
+    end
 
     if @song.save
       redirect_to @song
@@ -39,13 +57,35 @@ class SongsController < ApplicationController
   end
 
   def edit
-    @song = Song.find(params[:id])
+    if params[:artist_id]
+      artist = Artist.find_by(id: params[:artist_id])
+      if artist
+        @song = artist.songs.find{|song| song.id == params[:id].to_i}
+        if @song.nil?
+          redirect_to artist_songs_path(artist)
+        end
+      else
+        redirect_to artists_path
+      end
+    else
+      @song = Song.find(params[:id])
+      @artists = Artist.all
+    end
   end
 
   def update
-    @song = Song.find(params[:id])
-
-    @song.update(song_params)
+    if params[:artist_id]
+      artist = Artist.find_by(id: params[:artist_id])
+      if artist && artist.songs.any?{|song| song.id == params[:id].to_i}
+        @song = artist.songs.find{|song| song.id == params[:id].to_i}
+        @song.update(song_params)
+      else
+        render :edit
+      end
+    else
+      @song = Song.find(params[:id])
+      @song.update(song_params)
+    end
 
     if @song.save
       redirect_to @song
@@ -64,7 +104,7 @@ class SongsController < ApplicationController
   private
 
   def song_params
-    params.require(:song).permit(:title, :artist_name)
+    params.require(:song).permit(:title, :artist_name, :artist_id)
   end
 end
 
